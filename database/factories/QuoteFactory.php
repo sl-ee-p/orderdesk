@@ -16,12 +16,22 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class QuoteFactory extends Factory
 {
     /**
+     * Mirror the services: start with a unique placeholder, then derive the real number from the id.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Quote $model): void {
+            $model->update(['number' => sprintf('Q-%s-%05d', now()->format('Y'), $model->id)]);
+        });
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'number' => 'Q-'.fake()->unique()->numerify('######'),
+            'number' => (string) fake()->unique()->uuid(),
             'customer_id' => Customer::factory(),
             'user_id' => User::factory(),
             'valid_until' => fake()->dateTimeBetween('+7 days', '+45 days'),

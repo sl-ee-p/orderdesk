@@ -24,6 +24,11 @@ class DemoSeederTest extends TestCase
         foreach (Quote::with('items')->get() as $quote) {
             $this->assertSame($quote->items->sum('line_total_cents'), $quote->subtotal_cents);
             $this->assertSame($quote->subtotal_cents + $quote->tax_cents, $quote->total_cents);
+            $this->assertMatchesRegularExpression('/^Q-\d{4}-\d{5}$/', $quote->number);
+        }
+
+        foreach (Order::all() as $order) {
+            $this->assertMatchesRegularExpression('/^O-\d{4}-\d{5}$/', $order->number);
         }
     }
 
