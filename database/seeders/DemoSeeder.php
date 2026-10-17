@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Enums\OrderStatus;
 use App\Models\Customer;
-use App\Models\Order;
 use App\Models\Product;
 use App\Models\Quote;
 use App\Models\User;
+use App\Services\OrderService;
+use App\Services\QuoteConversionService;
 use Illuminate\Database\Seeder;
 
 /**
@@ -53,26 +55,23 @@ class DemoSeeder extends Seeder
             Quote::factory()->for($customer)->for($user)->rejected()->withItems(2)->create();
         }
 
-        // Accepted quotes, each already converted to an order in a mix of statuses.
-        // (Phase 2 switches this to the real QuoteConversionService.)
+        // Accepted quotes, each converted to an order and moved along the workflow.
+        $conversion = app(QuoteConversionService::class);
+        $orders = app(OrderService::class);
+        $paths = [
+            [],
+            [OrderStatus::Confirmed],
+            [OrderStatus::Confirmed, OrderStatus::Shipped],
+            [OrderStatus::Cancelled],
+        ];
+
         foreach ($customers->random(8) as $index => $customer) {
             $quote = Quote::factory()->for($customer)->for($user)->accepted()->withItems(fake()->numberBetween(1, 4))->create();
+            $order = $conversion->convert($quote);
 
-            $order = Order::factory()
-                ->for($customer)
-                ->state(fn () => [
-                    'quote_id' => $quote->id,
-                    'tax_rate_bp' => $quote->tax_rate_bp,
-                    'notes' => $quote->notes,
-                ])
-                ->{['confirmed', 'shipped', 'cancelled', 'confirmed'][$index % 4]}()
-                ->create();
-
-            foreach ($quote->items as $item) {
-                $order->items()->create($item->only(['product_id', 'description', 'quantity', 'unit_price_cents', 'line_total_cents']));
+            foreach ($paths[$index % count($paths)] as $status) {
+                $orders->transition($order, $status);
             }
-
-            $order->update($quote->only(['subtotal_cents', 'tax_cents', 'total_cents']));
         }
     }
 }
