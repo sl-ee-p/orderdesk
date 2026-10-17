@@ -95,3 +95,7 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 **CI proves the Docker setup instead of trusting it.** A fourth workflow job builds the image, starts the stack, waits for the login page and calls the API with the demo user. If someone breaks the Dockerfile, the build goes red.
 
 **README order follows a reader's patience:** what it is, one command, data model (Mermaid ER diagram renders on GitHub), API examples with `curl`, tests, layout. Detailed reasoning stays in this file, not the README.
+
+**Faker is a runtime dependency, not a dev one.** The Docker image installs without dev packages, but the demo seeder needs Faker to generate its fake data. It lives in `require` for that reason. (Found by actually running the container; the first start failed on seeding.)
+
+**Seeded documents use the same numbering as real ones** (`Q-2026-00031`), because the factories now derive the number from the id exactly like the services do.
