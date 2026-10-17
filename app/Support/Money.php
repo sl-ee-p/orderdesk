@@ -2,8 +2,6 @@
 
 namespace App\Support;
 
-use InvalidArgumentException;
-
 /**
  * Conversion between integer cents (storage) and decimal strings (UI).
  */
