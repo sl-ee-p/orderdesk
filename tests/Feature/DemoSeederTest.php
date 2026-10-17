@@ -27,6 +27,17 @@ class DemoSeederTest extends TestCase
         }
     }
 
+    public function test_seeding_twice_does_not_duplicate_data(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $quotes = Quote::count();
+
+        $this->seed(DemoSeeder::class);
+
+        $this->assertSame($quotes, Quote::count());
+        $this->assertSame(1, User::where('email', 'demo@orderdesk.test')->count());
+    }
+
     public function test_every_page_renders_with_demo_data(): void
     {
         $this->seed(DemoSeeder::class);

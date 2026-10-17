@@ -37,6 +37,11 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        // Idempotent: a container restart must not duplicate or crash on the demo data.
+        if (User::where('email', 'demo@orderdesk.test')->exists()) {
+            return;
+        }
+
         $user = User::factory()->create([
             'name' => 'Demo Admin',
             'email' => 'demo@orderdesk.test',
