@@ -15,12 +15,22 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class OrderFactory extends Factory
 {
     /**
+     * Mirror the services: start with a unique placeholder, then derive the real number from the id.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Order $model): void {
+            $model->update(['number' => sprintf('O-%s-%05d', now()->format('Y'), $model->id)]);
+        });
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'number' => 'O-'.fake()->unique()->numerify('######'),
+            'number' => (string) fake()->unique()->uuid(),
             'customer_id' => Customer::factory(),
             'status' => OrderStatus::Draft,
             'tax_rate_bp' => fake()->randomElement([0, 700, 1000, 2200]),

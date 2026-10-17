@@ -24,7 +24,23 @@ class DemoSeederTest extends TestCase
         foreach (Quote::with('items')->get() as $quote) {
             $this->assertSame($quote->items->sum('line_total_cents'), $quote->subtotal_cents);
             $this->assertSame($quote->subtotal_cents + $quote->tax_cents, $quote->total_cents);
+            $this->assertMatchesRegularExpression('/^Q-\d{4}-\d{5}$/', $quote->number);
         }
+
+        foreach (Order::all() as $order) {
+            $this->assertMatchesRegularExpression('/^O-\d{4}-\d{5}$/', $order->number);
+        }
+    }
+
+    public function test_seeding_twice_does_not_duplicate_data(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $quotes = Quote::count();
+
+        $this->seed(DemoSeeder::class);
+
+        $this->assertSame($quotes, Quote::count());
+        $this->assertSame(1, User::where('email', 'demo@orderdesk.test')->count());
     }
 
     public function test_every_page_renders_with_demo_data(): void
