@@ -43,3 +43,23 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 **No JavaScript framework.** Tailwind via Vite plus ~25 lines of vanilla JS to add/remove quote lines. `Model::preventLazyLoading()` is on outside production, so an accidental N+1 query fails tests instead of silently slowing pages.
 
 **Testing without Vite:** `TestCase` calls `withoutVite()`, so tests need no `npm run build`.
+
+## Phase 3 – REST API
+
+**The API is a second front door to the same services.** API controllers (`App\Http\Controllers\Api\V1`) validate, call `QuoteService` / `QuoteConversionService` / `OrderService` / `CustomerService`, and return resources. No business rule exists twice, so the web UI and the API cannot disagree about what a legal status change is.
+
+**Versioned under `/api/v1`.** A breaking change later can ship as `/api/v2` without breaking existing clients.
+
+**Sanctum personal access tokens, not sessions or JWT.** `POST /api/v1/auth/token` exchanges email + password for a bearer token (stored hashed in `personal_access_tokens`); `DELETE /api/v1/auth/token` revokes it. Tokens expire after 30 days (`SANCTUM_TOKEN_EXPIRATION_MINUTES`). Sanctum is first-party, needs no extra moving parts, and tokens can be revoked individually, which a stateless JWT cannot do without extra storage. Wrong credentials give `401` with a deliberately vague message.
+
+**Two rate limiters.** `login` (5/min per email + IP) protects password guessing on both the web login and the token endpoint; `api` (60/min per user, per IP if unauthenticated) bounds normal traffic. Both are named limiters in `AppServiceProvider`, so the numbers live in one place.
+
+**API Resources define the public JSON shape**, separate from the database columns. Money is always integer cents with a `_cents` suffix and tax is `tax_rate_bp`, so clients never parse decimals. Relations (`customer`, `items`) appear only when the controller eager-loaded them (`whenLoaded`), which also keeps lazy loading from sneaking in.
+
+**Pagination:** list endpoints use Laravel's paginator (`data`, `links`, `meta`). `?per_page=` defaults to 15 and is clamped to 1–100 so a client cannot ask for a million rows. Quotes and orders can be filtered with `?status=` and `?customer_id=`.
+
+**Form Requests are reused, not copied.** The API `ProductRequest` and `QuoteRequest` extend the web ones and change only the one field that differs (price and tax rate as integers instead of form strings). Status changes use one `QuoteStatusRequest` / `OrderStatusRequest` for both front ends.
+
+**Status codes follow the usual meaning:** `201` created, `204` deleted, `401` no/invalid token, `404` unknown id, `405` for things that do not exist (orders are created only by converting a quote, never directly, and are never deleted), `422` for validation errors *and* broken business rules (JSON `message`), `429` rate limited. Domain errors return JSON for every `/api/*` request even if the client forgot the `Accept` header.
+
+**Orders are read-mostly.** The API can list, show and change status of orders, and create them only via `POST /quotes/{id}/convert`. That keeps the quote-to-order rule as the single way an order comes into being.

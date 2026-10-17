@@ -37,8 +37,16 @@ class ProductRequest extends FormRequest
             'sku' => $data['sku'],
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
-            'unit_price_cents' => Money::toCents($data['unit_price']),
+            'unit_price_cents' => $this->unitPriceCents($data),
             'is_active' => $this->boolean('is_active'),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function unitPriceCents(array $data): int
+    {
+        return Money::toCents($data['unit_price']);
     }
 }
