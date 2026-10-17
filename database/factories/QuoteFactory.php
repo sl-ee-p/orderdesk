@@ -31,6 +31,11 @@ class QuoteFactory extends Factory
         ];
     }
 
+    public function draft(): static
+    {
+        return $this->state(['status' => QuoteStatus::Draft]);
+    }
+
     public function sent(): static
     {
         return $this->state(['status' => QuoteStatus::Sent]);

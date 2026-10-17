@@ -28,6 +28,11 @@ class OrderFactory extends Factory
         ];
     }
 
+    public function draft(): static
+    {
+        return $this->state(['status' => OrderStatus::Draft]);
+    }
+
     public function confirmed(): static
     {
         return $this->state(['status' => OrderStatus::Confirmed, 'confirmed_at' => now()]);

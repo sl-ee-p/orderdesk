@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Quote;
+use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -23,5 +25,19 @@ class DemoSeederTest extends TestCase
             $this->assertSame($quote->items->sum('line_total_cents'), $quote->subtotal_cents);
             $this->assertSame($quote->subtotal_cents + $quote->tax_cents, $quote->total_cents);
         }
+    }
+
+    public function test_every_page_renders_with_demo_data(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $this->actingAs(User::firstOrFail());
+
+        foreach (['/quotes', '/orders', '/customers', '/products'] as $url) {
+            $this->get($url)->assertOk();
+        }
+
+        $this->get('/customers/'.Customer::firstOrFail()->id)->assertOk();
+        $this->get('/quotes/'.Quote::firstOrFail()->id)->assertOk();
+        $this->get('/orders/'.Order::firstOrFail()->id)->assertOk();
     }
 }
