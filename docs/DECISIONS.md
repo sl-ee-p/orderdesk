@@ -63,3 +63,19 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 **Status codes follow the usual meaning:** `201` created, `204` deleted, `401` no/invalid token, `404` unknown id, `405` for things that do not exist (orders are created only by converting a quote, never directly, and are never deleted), `422` for validation errors *and* broken business rules (JSON `message`), `429` rate limited. Domain errors return JSON for every `/api/*` request even if the client forgot the `Accept` header.
 
 **Orders are read-mostly.** The API can list, show and change status of orders, and create them only via `POST /quotes/{id}/convert`. That keeps the quote-to-order rule as the single way an order comes into being.
+
+## Phase 4 – tests and CI
+
+**What is tested, and where.** Unit tests (`tests/Unit`) cover pure logic with no database: `TotalsCalculator`, `Money`, and the status-transition tables of both enums. Feature tests (`tests/Feature`, `tests/Feature/Api`) go through HTTP into the real services and database: login and rate limits, CRUD, the quote and order workflows, quote → order conversion rules, API tokens, validation, pagination and error codes. Tests assert behaviour (what the user sees, what is stored), not implementation details.
+
+**Business rules are tested at the service layer *and* through HTTP.** `QuoteConversionTest` calls the service directly for the rules (only accepted quotes, never twice, items and totals copied) and uses HTTP only to prove the buttons and error messages are wired up.
+
+**All-or-nothing is tested explicitly.** `TransactionSafetyTest` forces a failure halfway through quote creation, quote update and conversion and checks that nothing was half-saved. A transaction nobody tests is a transaction nobody can trust.
+
+**A route-protection test guards against forgetting `auth`.** It walks every registered route and fails if one is not behind `auth` / `auth:sanctum`, apart from a short allow-list (login, token endpoint, health check). Adding an unprotected endpoint by accident breaks the build.
+
+**Tests use SQLite in memory locally, and CI also runs MySQL.** SQLite makes the suite take about 3 seconds with nothing to install. But production uses MySQL, and the two behave differently (foreign keys, locking, strictness), so a separate CI job runs the same suite against a real MySQL 8.4 service, after first running `migrate:fresh --seed` on it. Real environment variables take precedence over `phpunit.xml`, which is how that job switches databases without changing any file.
+
+**CI workflow (`.github/workflows/tests.yml`)** runs on every push and pull request with three jobs: Pint code-style check, tests on PHP 8.3 and 8.4 with SQLite, tests on PHP 8.4 with MySQL. Minimal `contents: read` permissions, and a new push cancels the still-running older run of the same branch. No secrets are used; the MySQL password in the workflow belongs to a throw-away container that only exists during the job.
+
+**Not done on purpose:** no code-coverage percentage gate (no coverage driver is needed to run the suite, and a number says less than the tests above), and no browser tests (the UI is thin Blade over the tested controllers).
