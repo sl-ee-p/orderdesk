@@ -41,7 +41,7 @@ class QuoteRequest extends FormRequest
 
         return [
             'customer_id' => (int) $data['customer_id'],
-            'tax_rate_bp' => Money::percentToBasisPoints($data['tax_rate']),
+            'tax_rate_bp' => $this->taxRateBasisPoints($data),
             'valid_until' => $data['valid_until'] ?? null,
             'notes' => $data['notes'] ?? null,
             'items' => array_map(
@@ -49,5 +49,13 @@ class QuoteRequest extends FormRequest
                 array_values($data['items']),
             ),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function taxRateBasisPoints(array $data): int
+    {
+        return Money::percentToBasisPoints($data['tax_rate']);
     }
 }
