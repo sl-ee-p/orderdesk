@@ -79,3 +79,19 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 **CI workflow (`.github/workflows/tests.yml`)** runs on every push and pull request with three jobs: Pint code-style check, tests on PHP 8.3 and 8.4 with SQLite, tests on PHP 8.4 with MySQL. Minimal `contents: read` permissions, and a new push cancels the still-running older run of the same branch. No secrets are used; the MySQL password in the workflow belongs to a throw-away container that only exists during the job.
 
 **Not done on purpose:** no code-coverage percentage gate (no coverage driver is needed to run the suite, and a number says less than the tests above), and no browser tests (the UI is thin Blade over the tested controllers).
+
+## Phase 5 – Docker and README
+
+**Three containers, one command.** `docker compose up --build` starts the app (PHP 8.4 + Apache), MySQL 8.4 and, only with `--profile tools`, phpMyAdmin. The app waits for MySQL's health check, so there is no "start twice" dance. Data lives in named volumes, so `docker compose down` keeps it and `down -v` wipes it.
+
+**Multi-stage Dockerfile.** Stage 1 installs PHP packages without dev tools, stage 2 builds the Tailwind/Vite assets with Node, stage 3 is a small runtime image with neither Composer nor Node in it. The image never contains `.env` or any key (`.dockerignore`).
+
+**The app key is generated on first start and kept in the storage volume**, instead of being committed or baked into the image. Sessions therefore survive restarts, and no secret is in git. `APP_KEY` can still be supplied as an environment variable to override it.
+
+**The entrypoint does the housekeeping:** wait for the database (retrying `migrate`), seed demo data when `SEED_DEMO_DATA=true`, cache config/routes/views, then start Apache. The seeder is idempotent, so restarting never duplicates or crashes.
+
+**Demo credentials in `docker-compose.yml` are deliberately weak** (`secret`) and documented as local-only; they can be overridden with environment variables. Production would inject real secrets from the host.
+
+**CI proves the Docker setup instead of trusting it.** A fourth workflow job builds the image, starts the stack, waits for the login page and calls the API with the demo user. If someone breaks the Dockerfile, the build goes red.
+
+**README order follows a reader's patience:** what it is, one command, data model (Mermaid ER diagram renders on GitHub), API examples with `curl`, tests, layout. Detailed reasoning stays in this file, not the README.

@@ -103,3 +103,32 @@ jobs:
 
       - name: Run tests
         run: php artisan test
+
+  docker-smoke:
+    name: Docker image builds and serves the app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for the app
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/login > /dev/null; then exit 0; fi
+            sleep 3
+          done
+          docker compose logs
+          exit 1
+
+      - name: Log in through the API with the demo user
+        run: |
+          TOKEN=$(curl -fsS -X POST http://localhost:8000/api/v1/auth/token \
+            -H 'Accept: application/json' -H 'Content-Type: application/json' \
+            -d '{"email":"demo@orderdesk.test","password":"password"}' | sed -E 's/.*"token":"([^"]+)".*/\1/')
+          curl -fsS http://localhost:8000/api/v1/customers -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' | grep -q '"data"'
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
