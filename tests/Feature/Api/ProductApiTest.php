@@ -40,6 +40,23 @@ class ProductApiTest extends TestCase
             ->assertJsonValidationErrors('unit_price_cents');
     }
 
+    public function test_omitted_is_active_defaults_to_active_and_is_kept_on_update(): void
+    {
+        $this->postJson('/api/v1/products', ['sku' => 'AB-1', 'name' => 'Widget', 'unit_price_cents' => 100])
+            ->assertCreated()
+            ->assertJsonPath('data.is_active', true);
+
+        $inactive = Product::factory()->inactive()->create();
+        $this->putJson("/api/v1/products/{$inactive->id}", ['sku' => $inactive->sku, 'name' => 'Renamed', 'unit_price_cents' => 100])
+            ->assertOk()
+            ->assertJsonPath('data.is_active', false);
+
+        $active = Product::factory()->create(['is_active' => true]);
+        $this->putJson("/api/v1/products/{$active->id}", ['sku' => $active->sku, 'name' => 'Renamed', 'unit_price_cents' => 100])
+            ->assertOk()
+            ->assertJsonPath('data.is_active', true);
+    }
+
     public function test_update_list_and_delete(): void
     {
         $product = Product::factory()->create();

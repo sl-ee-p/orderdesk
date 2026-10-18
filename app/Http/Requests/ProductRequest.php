@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use App\Support\Money;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -48,8 +49,19 @@ class ProductRequest extends FormRequest
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'unit_price_cents' => $this->unitPriceCents($data),
-            'is_active' => $this->boolean('is_active'),
+            'is_active' => $this->has('is_active') ? $this->boolean('is_active') : $this->currentIsActive(),
         ];
+    }
+
+    /**
+     * When is_active is omitted, a new product is active (like the column default)
+     * and an existing one keeps its current state. The web form always sends the field.
+     */
+    protected function currentIsActive(): bool
+    {
+        $product = $this->route('product');
+
+        return $product instanceof Product ? $product->is_active : true;
     }
 
     /**
