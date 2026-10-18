@@ -17,10 +17,18 @@ class TotalsCalculator
 
     /**
      * Tax is rounded half up to the nearest cent, once, on the whole subtotal.
+     *
+     * The subtotal is split into whole multiples of BASIS_POINTS and a remainder so the
+     * intermediate product never exceeds PHP_INT_MAX (subtotal × rate would overflow to a
+     * float for large but valid quotes).
      */
     public function tax(int $subtotalCents, int $taxRateBp): int
     {
-        return intdiv($subtotalCents * $taxRateBp + intdiv(self::BASIS_POINTS, 2), self::BASIS_POINTS);
+        $wholeUnits = intdiv($subtotalCents, self::BASIS_POINTS);
+        $remainder = $subtotalCents % self::BASIS_POINTS;
+
+        return $wholeUnits * $taxRateBp
+            + intdiv($remainder * $taxRateBp + intdiv(self::BASIS_POINTS, 2), self::BASIS_POINTS);
     }
 
     /**

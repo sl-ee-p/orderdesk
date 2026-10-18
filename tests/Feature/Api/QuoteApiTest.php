@@ -61,6 +61,18 @@ class QuoteApiTest extends TestCase
             ->assertJsonValidationErrors('items.0.product_id');
     }
 
+    public function test_largest_allowed_quote_is_totalled_exactly(): void
+    {
+        $product = Product::factory()->create(['unit_price_cents' => 4294967295]);
+        $items = array_fill(0, 100, ['product_id' => $product->id, 'quantity' => 100000]);
+
+        $this->postJson('/api/v1/quotes', [...$this->payload(), 'tax_rate_bp' => 1950, 'items' => $items])
+            ->assertCreated()
+            ->assertJsonPath('data.subtotal_cents', 42949672950000000)
+            ->assertJsonPath('data.tax_cents', 8375186225250000)
+            ->assertJsonPath('data.total_cents', 51324859175250000);
+    }
+
     public function test_index_is_paginated_and_filterable_by_status(): void
     {
         Quote::factory()->count(3)->create();
