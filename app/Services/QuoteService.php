@@ -104,12 +104,22 @@ class QuoteService
 
     /**
      * Rebuild the line items from products (snapshotting name and price) and store the totals.
+     * Products are re-checked here because one may be deleted or deactivated after validation.
      *
      * @param  list<array{product_id: int, quantity: int}>  $items
      */
     private function replaceItems(Quote $quote, array $items): void
     {
-        $products = Product::query()->findMany(array_column($items, 'product_id'))->keyBy('id');
+        $products = Product::query()
+            ->where('is_active', true)
+            ->findMany(array_column($items, 'product_id'))
+            ->keyBy('id');
+
+        foreach ($items as $item) {
+            if (! $products->has($item['product_id'])) {
+                throw DomainRuleViolation::productUnavailable();
+            }
+        }
 
         $quote->items()->delete();
 

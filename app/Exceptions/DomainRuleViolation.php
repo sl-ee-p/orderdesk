@@ -38,6 +38,11 @@ class DomainRuleViolation extends DomainException
         return new self('This quote has already been converted to an order.');
     }
 
+    public static function productUnavailable(): self
+    {
+        return new self('A selected product is no longer available. Please choose another one.');
+    }
+
     public static function customerHasDocuments(): self
     {
         return new self('This customer has quotes or orders and cannot be deleted.');
