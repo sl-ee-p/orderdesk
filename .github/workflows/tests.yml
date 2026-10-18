@@ -7,9 +7,11 @@ on:
 permissions:
   contents: read
 
+# A newer push supersedes an older run on feature branches. On main, runs queue instead:
+# cancelling there could stop a publish or deploy halfway.
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   lint:

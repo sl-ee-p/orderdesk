@@ -76,7 +76,7 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 
 **Tests use SQLite in memory locally, and CI also runs MySQL.** SQLite makes the suite take about 3 seconds with nothing to install. But production uses MySQL, and the two behave differently (foreign keys, locking, strictness), so a separate CI job runs the same suite against a real MySQL 8.4 service, after first running `migrate:fresh --seed` on it. Real environment variables take precedence over `phpunit.xml`, which is how that job switches databases without changing any file.
 
-**CI workflow (`.github/workflows/tests.yml`)** runs on every push and pull request with three jobs: Pint code-style check, tests on PHP 8.3 and 8.4 with SQLite, tests on PHP 8.4 with MySQL. Minimal `contents: read` permissions, and a new push cancels the still-running older run of the same branch. No secrets are used; the MySQL password in the workflow belongs to a throw-away container that only exists during the job.
+**CI workflow (`.github/workflows/tests.yml`)** runs on every push and pull request with three jobs: Pint code-style check, tests on PHP 8.4 with SQLite, tests on PHP 8.4 with MySQL. (PHP 8.3 was dropped: the locked Symfony 8 components require PHP 8.4, and `composer.json` says so.) Minimal `contents: read` permissions, and a new push cancels the still-running older run of the same branch, except on `main`, where runs queue instead so a publish or deploy is never cut off halfway. No secrets are used; the MySQL password in the workflow belongs to a throw-away container that only exists during the job.
 
 **Not done on purpose:** no code-coverage percentage gate (no coverage driver is needed to run the suite, and a number says less than the tests above), and no browser tests (the UI is thin Blade over the tested controllers).
 
@@ -99,3 +99,11 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 **Faker is a runtime dependency, not a dev one.** The Docker image installs without dev packages, but the demo seeder needs Faker to generate its fake data. It lives in `require` for that reason. (Found by actually running the container; the first start failed on seeding.)
 
 **Seeded documents use the same numbering as real ones** (`Q-2026-00031`), because the factories now derive the number from the id exactly like the services do.
+
+## Continuous delivery
+
+**Publish, then deploy, only from `main` and only when everything is green.** The `publish` job needs the lint, both test jobs and the Docker smoke test. It pushes the image to GHCR tagged with the commit SHA (immutable, used for deploys and rollbacks) and `latest` (convenience only).
+
+**The deploy runs on a self-hosted runner next to the server**, so no SSH keys or server credentials live in GitHub. `deploy/deploy.sh` copies `deploy/compose.prod.yml` into the app directory, whose `.env` holds the real secrets, dumps the database, starts the new image and polls the login page. If the new image never answers, it starts the previously deployed tag again. Migrations are not reversed automatically; the pre-deploy dump is there for that.
+
+**Deploys never overlap and are never cancelled midway.** The deploy job has its own `deploy-production` concurrency group without cancellation, and the workflow-level group does not cancel runs on `main`.

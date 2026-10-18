@@ -40,7 +40,7 @@ Stop with `Ctrl+C`; remove the containers and data with `docker compose down -v`
 
 ### Without Docker
 
-Requires PHP 8.3+, Composer, Node 22 and a database (SQLite works out of the box).
+Requires PHP 8.4+, Composer, Node 22 and a database (SQLite works out of the box).
 
 ```bash
 composer install
@@ -152,7 +152,7 @@ curl -s 'http://localhost:8000/api/v1/quotes?status=sent' \
   -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json'
 ```
 
-Lists return `data`, `links` and `meta`. `?per_page=` is limited to 1–100; quotes and orders accept `?status=` and `?customer_id=`.
+Lists return `data`, `links` and `meta`. `?per_page=` is limited to 1–100; quotes and orders accept `?status=` and `?customer_id=` (an unknown status or a non-numeric id is a `422`).
 
 ### Create a customer and a product
 
@@ -165,6 +165,8 @@ curl -s -X POST http://localhost:8000/api/v1/products \
   -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' -H 'Content-Type: application/json' \
   -d '{"sku":"NB-100","name":"Notebook","unit_price_cents":1250,"is_active":true}'
 ```
+
+`is_active` is optional: new products default to active, and an update that omits it leaves it unchanged.
 
 ### Quote → order
 
@@ -218,6 +220,10 @@ vendor/bin/pint --test           # code style check (drop --test to fix)
 ```
 
 To run the suite against MySQL as CI does, export `DB_CONNECTION=mysql DB_HOST=... DB_DATABASE=... DB_USERNAME=... DB_PASSWORD=...` before `php artisan test` (real environment variables override `phpunit.xml`). Use an empty test database; the tests reset it.
+
+## Continuous delivery
+
+Every push and pull request runs the `Tests` workflow: Pint, the suite on SQLite and on MySQL 8.4, and a Docker smoke test. On a push to `main`, once all of those pass, the image is published to GHCR (`ghcr.io/<owner>/orderdesk:<sha>` and `:latest`) and the `deploy` job runs [`deploy/deploy.sh`](deploy/deploy.sh) on a self-hosted runner: it backs up the database, starts the new image with [`deploy/compose.prod.yml`](deploy/compose.prod.yml) (secrets come from the server's `.env`), waits for the app to answer, and rolls back to the previous image if it never becomes healthy.
 
 ## Project layout
 
