@@ -2,12 +2,17 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use App\Support\Money;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ProductRequest extends FormRequest
 {
+    /** Largest price the unsigned integer price column can hold. */
+    public const MAX_UNIT_PRICE_CENTS = 4294967295;
+
     /**
      * @return array<string, list<mixed>>
      */
@@ -17,9 +22,15 @@ class ProductRequest extends FormRequest
             'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->ignore($this->route('product'))],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'unit_price' => ['required', 'string', fn ($attribute, $value, $fail) => Money::toCents($value) === null
-                ? $fail('The unit price must be an amount like 12.50.')
-                : null],
+            'unit_price' => ['bail', 'required', 'string', function (string $attribute, string $value, Closure $fail): void {
+                $cents = Money::toCents($value);
+
+                if ($cents === null) {
+                    $fail('The unit price must be an amount like 12.50.');
+                } elseif ($cents > self::MAX_UNIT_PRICE_CENTS) {
+                    $fail('The unit price may not be greater than '.Money::format(self::MAX_UNIT_PRICE_CENTS).'.');
+                }
+            }],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -38,8 +49,19 @@ class ProductRequest extends FormRequest
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'unit_price_cents' => $this->unitPriceCents($data),
-            'is_active' => $this->boolean('is_active'),
+            'is_active' => $this->has('is_active') ? $this->boolean('is_active') : $this->currentIsActive(),
         ];
+    }
+
+    /**
+     * When is_active is omitted, a new product is active (like the column default)
+     * and an existing one keeps its current state. The web form always sends the field.
+     */
+    protected function currentIsActive(): bool
+    {
+        $product = $this->route('product');
+
+        return $product instanceof Product ? $product->is_active : true;
     }
 
     /**

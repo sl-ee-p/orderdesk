@@ -61,6 +61,18 @@ class QuoteApiTest extends TestCase
             ->assertJsonValidationErrors('items.0.product_id');
     }
 
+    public function test_largest_allowed_quote_is_totalled_exactly(): void
+    {
+        $product = Product::factory()->create(['unit_price_cents' => 4294967295]);
+        $items = array_fill(0, 100, ['product_id' => $product->id, 'quantity' => 100000]);
+
+        $this->postJson('/api/v1/quotes', [...$this->payload(), 'tax_rate_bp' => 1950, 'items' => $items])
+            ->assertCreated()
+            ->assertJsonPath('data.subtotal_cents', 42949672950000000)
+            ->assertJsonPath('data.tax_cents', 8375186225250000)
+            ->assertJsonPath('data.total_cents', 51324859175250000);
+    }
+
     public function test_index_is_paginated_and_filterable_by_status(): void
     {
         Quote::factory()->count(3)->create();
@@ -69,6 +81,16 @@ class QuoteApiTest extends TestCase
         $this->getJson('/api/v1/quotes')->assertOk()->assertJsonCount(5, 'data')->assertJsonPath('meta.total', 5);
         $this->getJson('/api/v1/quotes?status=sent')->assertOk()->assertJsonCount(2, 'data');
         $this->getJson('/api/v1/quotes?per_page=2')->assertJsonCount(2, 'data')->assertJsonPath('meta.last_page', 3);
+    }
+
+    public function test_list_filters_are_validated(): void
+    {
+        $quote = Quote::factory()->create();
+        Quote::factory()->create();
+
+        $this->getJson("/api/v1/quotes?customer_id={$quote->customer_id}")->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/quotes?status=shipped')->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->getJson('/api/v1/quotes?customer_id[]=1')->assertUnprocessable()->assertJsonValidationErrors('customer_id');
     }
 
     public function test_show_update_and_delete_a_draft(): void

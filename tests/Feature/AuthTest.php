@@ -46,4 +46,20 @@ class AuthTest extends TestCase
 
         $this->post('/login', ['email' => 'a@example.com', 'password' => 'x'])->assertStatus(429);
     }
+
+    public function test_rate_limit_ignores_email_case_and_whitespace(): void
+    {
+        foreach (['a@example.com', 'A@Example.com', ' a@example.com', 'A@EXAMPLE.COM', 'a@EXAMPLE.com'] as $email) {
+            $this->post('/login', ['email' => $email, 'password' => 'x']);
+        }
+
+        $this->post('/login', ['email' => 'a@example.COM', 'password' => 'x'])->assertStatus(429);
+    }
+
+    public function test_non_string_email_is_a_validation_error(): void
+    {
+        $this->from('/login')->post('/login', ['email' => ['a@example.com'], 'password' => 'x'])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors('email');
+    }
 }

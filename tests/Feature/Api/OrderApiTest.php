@@ -33,6 +33,18 @@ class OrderApiTest extends TestCase
             ->assertJsonCount(2, 'data.items');
     }
 
+    public function test_list_filters_are_validated(): void
+    {
+        $order = Order::factory()->create();
+        Order::factory()->create();
+
+        $this->getJson("/api/v1/orders?customer_id={$order->customer_id}")->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/orders?status=')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/v1/orders?status=sent')->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->getJson('/api/v1/orders?status[]=draft')->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->getJson('/api/v1/orders?customer_id=abc')->assertUnprocessable()->assertJsonValidationErrors('customer_id');
+    }
+
     public function test_orders_cannot_be_created_or_deleted_directly(): void
     {
         $order = Order::factory()->create();

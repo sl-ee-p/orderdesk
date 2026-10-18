@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,7 +33,12 @@ class AppServiceProvider extends ServiceProvider
         // General API budget: 60 requests per minute per user (per IP when unauthenticated).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
 
-        // Slow down password guessing: 5 attempts per minute per email and IP.
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by($request->input('email').'|'.$request->ip()));
+        // Slow down password guessing: 5 attempts per minute per email and IP. The email is
+        // normalised so "Demo@…" and "demo@…" (the same account on MySQL) share one budget.
+        RateLimiter::for('login', function (Request $request): Limit {
+            $email = $request->input('email');
+
+            return Limit::perMinute(5)->by(Str::lower(trim(is_string($email) ? $email : '')).'|'.$request->ip());
+        });
     }
 }

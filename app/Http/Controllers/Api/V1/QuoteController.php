@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\QuoteStatus;
 use App\Http\Requests\Api\QuoteRequest;
 use App\Http\Resources\QuoteResource;
 use App\Models\Quote;
@@ -20,10 +21,12 @@ class QuoteController extends ApiController
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $filters = $this->documentFilters($request, QuoteStatus::class);
+
         $quotes = Quote::query()
             ->with('customer')
-            ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
-            ->when($request->query('customer_id'), fn ($query, $id) => $query->where('customer_id', $id))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['customer_id'] ?? null, fn ($query, $id) => $query->where('customer_id', $id))
             ->latest('id')
             ->paginate($this->perPage($request));
 

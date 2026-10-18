@@ -61,4 +61,19 @@ class CustomerTest extends TestCase
         $this->delete("/customers/{$quote->customer_id}")->assertSessionHas('error');
         $this->assertModelExists($quote->customer);
     }
+
+    public function test_document_created_during_deletion_still_blocks_it(): void
+    {
+        $customer = Customer::factory()->create();
+        // Simulate another request adding a quote between the "has documents?" check and the delete.
+        Customer::deleting(fn (Customer $deleting) => Quote::factory()->for($deleting)->create());
+
+        try {
+            $this->delete("/customers/{$customer->id}")->assertSessionHas('error');
+        } finally {
+            Customer::flushEventListeners();
+        }
+
+        $this->assertModelExists($customer);
+    }
 }

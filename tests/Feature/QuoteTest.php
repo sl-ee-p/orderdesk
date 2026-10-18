@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\QuoteStatus;
+use App\Exceptions\DomainRuleViolation;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Quote;
 use App\Models\User;
+use App\Services\QuoteService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -73,6 +75,41 @@ class QuoteTest extends TestCase
             ->assertSessionHasErrors('items.0.product_id');
         $this->post('/quotes', [...$this->payload($customer, Product::factory()->create()), 'tax_rate' => '150'])
             ->assertSessionHasErrors('tax_rate');
+
+        $this->assertDatabaseCount('quotes', 0);
+    }
+
+    public function test_service_refuses_products_that_became_unavailable_after_validation(): void
+    {
+        $customer = Customer::factory()->create();
+        $active = Product::factory()->create();
+        $inactive = Product::factory()->inactive()->create();
+        $quotes = app(QuoteService::class);
+
+        foreach ([$inactive->id, 999999] as $productId) {
+            try {
+                $quotes->create([
+                    'customer_id' => $customer->id,
+                    'tax_rate_bp' => 2200,
+                    'items' => [['product_id' => $active->id, 'quantity' => 1], ['product_id' => $productId, 'quantity' => 1]],
+                ], $this->user);
+                $this->fail('An unavailable product should have been refused.');
+            } catch (DomainRuleViolation $e) {
+                $this->assertSame(DomainRuleViolation::productUnavailable()->getMessage(), $e->getMessage());
+            }
+        }
+
+        $this->assertDatabaseCount('quotes', 0);
+        $this->assertDatabaseCount('quote_items', 0);
+    }
+
+    public function test_malformed_tax_rates_are_validation_errors(): void
+    {
+        $payload = $this->payload(Customer::factory()->create(), Product::factory()->create());
+
+        $this->post('/quotes', [...$payload, 'tax_rate' => ['22']])->assertSessionHasErrors('tax_rate');
+        $this->post('/quotes', [...$payload, 'tax_rate' => '99999999999999999999'])->assertSessionHasErrors('tax_rate');
+        $this->post('/quotes', [...$payload, 'tax_rate' => '22,5'])->assertSessionHasErrors('tax_rate');
 
         $this->assertDatabaseCount('quotes', 0);
     }

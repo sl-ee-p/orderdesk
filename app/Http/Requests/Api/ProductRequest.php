@@ -17,7 +17,7 @@ class ProductRequest extends WebProductRequest
     {
         return [
             ...Arr::except(parent::rules(), 'unit_price'),
-            'unit_price_cents' => ['required', 'integer', 'min:0', 'max:4294967295'],
+            'unit_price_cents' => ['required', 'integer', 'min:0', 'max:'.self::MAX_UNIT_PRICE_CENTS],
         ];
     }
 

@@ -25,6 +25,15 @@ class TotalsCalculatorTest extends TestCase
         $this->assertSame(0, $calculator->tax(49, 100));  // 0.49 cent -> 0
     }
 
+    public function test_tax_on_large_subtotals_does_not_overflow(): void
+    {
+        $calculator = new TotalsCalculator;
+
+        // 429,496,729,500,123.40 at 19.5% = 83,751,862,252,524.063, rounded to the cent.
+        $this->assertSame(8375186225252406, $calculator->tax(42949672950012340, 1950));
+        $this->assertSame(42949672950012340, $calculator->tax(42949672950012340, 10000));
+    }
+
     public function test_no_lines_gives_zero_totals(): void
     {
         $this->assertSame(

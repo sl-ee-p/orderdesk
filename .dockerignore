@@ -14,3 +14,7 @@ storage/framework/views/*
 tests
 docs
 *.md
+.claude
+.phpunit.cache
+.phpunit.result.cache
+database/*.sqlite*

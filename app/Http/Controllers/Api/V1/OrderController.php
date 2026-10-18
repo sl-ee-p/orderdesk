@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\OrderStatus;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
@@ -14,10 +15,12 @@ class OrderController extends ApiController
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $filters = $this->documentFilters($request, OrderStatus::class);
+
         $orders = Order::query()
             ->with('customer')
-            ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
-            ->when($request->query('customer_id'), fn ($query, $id) => $query->where('customer_id', $id))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['customer_id'] ?? null, fn ($query, $id) => $query->where('customer_id', $id))
             ->latest('id')
             ->paginate($this->perPage($request));
 
