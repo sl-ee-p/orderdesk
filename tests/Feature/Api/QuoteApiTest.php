@@ -83,6 +83,16 @@ class QuoteApiTest extends TestCase
         $this->getJson('/api/v1/quotes?per_page=2')->assertJsonCount(2, 'data')->assertJsonPath('meta.last_page', 3);
     }
 
+    public function test_list_filters_are_validated(): void
+    {
+        $quote = Quote::factory()->create();
+        Quote::factory()->create();
+
+        $this->getJson("/api/v1/quotes?customer_id={$quote->customer_id}")->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/quotes?status=shipped')->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->getJson('/api/v1/quotes?customer_id[]=1')->assertUnprocessable()->assertJsonValidationErrors('customer_id');
+    }
+
     public function test_show_update_and_delete_a_draft(): void
     {
         $quote = Quote::factory()->withItems()->create();
