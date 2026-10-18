@@ -36,6 +36,13 @@ class AuthTokenTest extends TestCase
         $this->postJson('/api/v1/auth/token', [])->assertUnprocessable()->assertJsonValidationErrors(['email', 'password']);
     }
 
+    public function test_non_string_email_is_a_validation_error(): void
+    {
+        $this->postJson('/api/v1/auth/token', ['email' => ['a@example.com'], 'password' => 'x'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+    }
+
     public function test_requests_without_a_token_get_401_json(): void
     {
         $this->getJson('/api/v1/quotes')->assertUnauthorized();
