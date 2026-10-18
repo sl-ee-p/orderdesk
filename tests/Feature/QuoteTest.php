@@ -77,6 +77,17 @@ class QuoteTest extends TestCase
         $this->assertDatabaseCount('quotes', 0);
     }
 
+    public function test_malformed_tax_rates_are_validation_errors(): void
+    {
+        $payload = $this->payload(Customer::factory()->create(), Product::factory()->create());
+
+        $this->post('/quotes', [...$payload, 'tax_rate' => ['22']])->assertSessionHasErrors('tax_rate');
+        $this->post('/quotes', [...$payload, 'tax_rate' => '99999999999999999999'])->assertSessionHasErrors('tax_rate');
+        $this->post('/quotes', [...$payload, 'tax_rate' => '22,5'])->assertSessionHasErrors('tax_rate');
+
+        $this->assertDatabaseCount('quotes', 0);
+    }
+
     public function test_draft_quote_can_be_edited_and_items_are_replaced(): void
     {
         $quote = Quote::factory()->withItems(3)->create();

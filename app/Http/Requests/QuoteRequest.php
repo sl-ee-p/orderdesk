@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Support\Money;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +16,7 @@ class QuoteRequest extends FormRequest
     {
         return [
             'customer_id' => ['required', 'integer', Rule::exists('customers', 'id')],
-            'tax_rate' => ['required', 'string', function ($attribute, $value, $fail) {
+            'tax_rate' => ['bail', 'required', 'string', function (string $attribute, string $value, Closure $fail): void {
                 $basisPoints = Money::percentToBasisPoints($value);
 
                 if ($basisPoints === null || $basisPoints > 10000) {

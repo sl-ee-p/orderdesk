@@ -34,6 +34,24 @@ class ProductTest extends TestCase
             ->assertSessionHasErrors(['sku', 'unit_price']);
     }
 
+    public function test_malformed_and_out_of_range_prices_are_validation_errors(): void
+    {
+        $this->post('/products', ['sku' => 'AB-1', 'name' => 'Widget', 'unit_price' => ['12']])
+            ->assertSessionHasErrors('unit_price');
+        $this->post('/products', ['sku' => 'AB-1', 'name' => 'Widget', 'unit_price' => '12,50'])
+            ->assertSessionHasErrors('unit_price');
+        $this->post('/products', ['sku' => 'AB-1', 'name' => 'Widget', 'unit_price' => '42949672.96'])
+            ->assertSessionHasErrors('unit_price');
+        $this->post('/products', ['sku' => 'AB-1', 'name' => 'Widget', 'unit_price' => '99999999999999999999'])
+            ->assertSessionHasErrors('unit_price');
+
+        $this->assertDatabaseCount('products', 0);
+
+        $this->post('/products', ['sku' => 'AB-1', 'name' => 'Widget', 'unit_price' => '42,949,672.95'])
+            ->assertRedirect('/products');
+        $this->assertDatabaseHas('products', ['sku' => 'AB-1', 'unit_price_cents' => 4294967295]);
+    }
+
     public function test_product_can_be_deactivated_and_deleted(): void
     {
         $product = Product::factory()->create(['unit_price_cents' => 500]);

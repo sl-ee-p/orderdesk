@@ -3,11 +3,15 @@
 namespace App\Http\Requests;
 
 use App\Support\Money;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ProductRequest extends FormRequest
 {
+    /** Largest price the unsigned integer price column can hold. */
+    public const MAX_UNIT_PRICE_CENTS = 4294967295;
+
     /**
      * @return array<string, list<mixed>>
      */
@@ -17,9 +21,15 @@ class ProductRequest extends FormRequest
             'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->ignore($this->route('product'))],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'unit_price' => ['required', 'string', fn ($attribute, $value, $fail) => Money::toCents($value) === null
-                ? $fail('The unit price must be an amount like 12.50.')
-                : null],
+            'unit_price' => ['bail', 'required', 'string', function (string $attribute, string $value, Closure $fail): void {
+                $cents = Money::toCents($value);
+
+                if ($cents === null) {
+                    $fail('The unit price must be an amount like 12.50.');
+                } elseif ($cents > self::MAX_UNIT_PRICE_CENTS) {
+                    $fail('The unit price may not be greater than '.Money::format(self::MAX_UNIT_PRICE_CENTS).'.');
+                }
+            }],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
