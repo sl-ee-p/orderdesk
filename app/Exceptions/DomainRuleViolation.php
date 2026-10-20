@@ -28,6 +28,11 @@ class DomainRuleViolation extends DomainException
         return new self('Only draft quotes can be changed or deleted.');
     }
 
+    public static function quoteExpired(): self
+    {
+        return new self('This quote is past its valid-until date, so it can no longer be sent or accepted.');
+    }
+
     public static function quoteNotConvertible(): self
     {
         return new self('Only accepted quotes can be converted to an order.');

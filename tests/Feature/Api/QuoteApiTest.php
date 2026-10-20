@@ -165,6 +165,18 @@ class QuoteApiTest extends TestCase
             ->assertJsonPath('message', 'This quote has already been converted to an order.');
     }
 
+    public function test_expired_quote_cannot_be_accepted(): void
+    {
+        $quote = Quote::factory()->sent()->create(['valid_until' => today()->subDay()]);
+
+        $this->postJson("/api/v1/quotes/{$quote->id}/status", ['status' => 'accepted'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'This quote is past its valid-until date, so it can no longer be sent or accepted.');
+        $this->postJson("/api/v1/quotes/{$quote->id}/status", ['status' => 'rejected'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected');
+    }
+
     public function test_illegal_and_unknown_status_values(): void
     {
         $quote = Quote::factory()->create();

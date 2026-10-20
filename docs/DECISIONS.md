@@ -107,3 +107,9 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 **The deploy runs on a self-hosted runner next to the server**, so no SSH keys or server credentials live in GitHub. `deploy/deploy.sh` copies `deploy/compose.prod.yml` into the app directory, whose `.env` holds the real secrets, dumps the database, starts the new image and polls the login page. If the new image never answers, it starts the previously deployed tag again. Migrations are not reversed automatically; the pre-deploy dump is there for that.
 
 **Deploys never overlap and are never cancelled midway.** The deploy job has its own `deploy-production` concurrency group without cancellation, and the workflow-level group does not cancel runs on `main`.
+
+## Second review pass
+
+**A quote's validity date is enforced, not just displayed.** `valid_until` is the date until which the offer stands, so `QuoteService` refuses to send or accept a quote once that day is over (it is valid through the whole day). Rejecting stays possible, so an expired quote can still be closed. A draft can be given a new date and then sent. Accepted quotes are unaffected: conversion to an order does not look at the date, because the customer agreed in time. The rule lives in the service, next to the status rules, so the web UI and the API refuse in the same way; the quote page also hides the buttons and marks the date as expired.
+
+**Dates in requests are plain calendar dates.** `valid_until` must be `YYYY-MM-DD`. The looser `date` rule accepted anything PHP can parse ("tomorrow", "01/12/2030", full timestamps), and a client should not have to guess how its input was read.

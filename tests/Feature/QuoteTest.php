@@ -169,6 +169,36 @@ class QuoteTest extends TestCase
         $this->assertSame(QuoteStatus::Draft, $quote->fresh()->status);
     }
 
+    public function test_expired_quote_can_be_rejected_but_not_sent_or_accepted(): void
+    {
+        $draft = Quote::factory()->withItems()->create(['valid_until' => today()->subDay()]);
+        $sent = Quote::factory()->sent()->withItems()->create(['valid_until' => today()->subDay()]);
+        $expired = DomainRuleViolation::quoteExpired()->getMessage();
+
+        $this->get("/quotes/{$draft->id}")->assertOk()->assertSee('(expired')->assertDontSee('value="sent"', false);
+        $this->get("/quotes/{$sent->id}")->assertOk()->assertSee('(expired')
+            ->assertDontSee('value="accepted"', false)
+            ->assertSee('value="rejected"', false);
+
+        $this->post("/quotes/{$draft->id}/status", ['status' => 'sent'])->assertSessionHas('error', $expired);
+        $this->post("/quotes/{$sent->id}/status", ['status' => 'accepted'])->assertSessionHas('error', $expired);
+        $this->assertSame(QuoteStatus::Draft, $draft->fresh()->status);
+        $this->assertSame(QuoteStatus::Sent, $sent->fresh()->status);
+
+        $this->post("/quotes/{$sent->id}/status", ['status' => 'rejected'])->assertSessionHas('status');
+        $this->assertSame(QuoteStatus::Rejected, $sent->fresh()->status);
+    }
+
+    public function test_quote_is_still_valid_on_its_valid_until_day(): void
+    {
+        $quote = Quote::factory()->sent()->withItems()->create(['valid_until' => today()]);
+
+        $this->get("/quotes/{$quote->id}")->assertOk()->assertDontSee('(expired')->assertSee('value="accepted"', false);
+        $this->post("/quotes/{$quote->id}/status", ['status' => 'accepted'])->assertSessionHas('status');
+
+        $this->assertSame(QuoteStatus::Accepted, $quote->fresh()->status);
+    }
+
     public function test_pages_render(): void
     {
         Product::factory()->count(2)->create();

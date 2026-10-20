@@ -11,7 +11,7 @@ All data is **fake demo data**. No real customer or company data is used anywher
 - **Web UI** (Blade + Tailwind) with login: customers, products, quotes with line items, quote → order conversion, order status workflow.
 - **REST API** (`/api/v1`) for the same resources: Sanctum bearer tokens, API Resources, Form Request validation, pagination, filtering and rate limiting.
 - **Workflows enforced in one place** (status enums + services), so web and API behave identically:
-  - Quote: `draft → sent → accepted | rejected`. Only draft quotes can be edited or deleted; only accepted quotes convert, and only once.
+  - Quote: `draft → sent → accepted | rejected`. Only draft quotes can be edited or deleted; only accepted quotes convert, and only once. A quote past its valid-until date can still be rejected, but no longer sent or accepted.
   - Order: `draft → confirmed → shipped`; draft or confirmed orders can be `cancelled`.
 - **Money-safe:** integer cents, tax in basis points, line prices snapshotted at quote time.
 - **Tested:** PHPUnit unit and feature tests, run on every push by GitHub Actions (SQLite and MySQL).
@@ -194,7 +194,7 @@ curl -s -X POST http://localhost:8000/api/v1/orders/1/status \
   -d '{"status":"confirmed"}'
 ```
 
-An illegal step returns `422` with a readable message, e.g. `{"message":"A draft quote cannot become accepted."}`.
+An illegal step returns `422` with a readable message, e.g. `{"message":"A draft quote cannot become accepted."}`. The same happens when sending or accepting a quote whose optional `valid_until` (a `YYYY-MM-DD` date, valid through that day) has passed.
 
 ### Endpoints
 

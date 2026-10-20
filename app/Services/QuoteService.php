@@ -74,6 +74,11 @@ class QuoteService
                 throw DomainRuleViolation::quoteTransition($quote->status, $target);
             }
 
+            // An expired offer can still be rejected, but no longer sent or accepted.
+            if ($target !== QuoteStatus::Rejected && $quote->isExpired()) {
+                throw DomainRuleViolation::quoteExpired();
+            }
+
             $quote->update(['status' => $target]);
 
             return $quote;

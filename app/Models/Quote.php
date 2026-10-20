@@ -28,6 +28,14 @@ class Quote extends Model
         ];
     }
 
+    /**
+     * A quote is valid through the whole of its valid_until day; without a date it never expires.
+     */
+    public function isExpired(): bool
+    {
+        return $this->valid_until !== null && $this->valid_until->lt(today());
+    }
+
     /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
