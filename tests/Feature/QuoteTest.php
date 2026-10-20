@@ -79,6 +79,17 @@ class QuoteTest extends TestCase
         $this->assertDatabaseCount('quotes', 0);
     }
 
+    public function test_form_shows_which_line_has_an_error(): void
+    {
+        $inactive = Product::factory()->inactive()->create();
+
+        $this->from('/quotes/create')->followingRedirects()
+            ->post('/quotes', $this->payload(Customer::factory()->create(), $inactive))
+            ->assertOk()
+            ->assertSee('Line 1:')
+            ->assertSee('aria-label="Product"', false);
+    }
+
     public function test_service_refuses_products_that_became_unavailable_after_validation(): void
     {
         $customer = Customer::factory()->create();

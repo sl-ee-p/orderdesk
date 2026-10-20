@@ -6,8 +6,8 @@
         @endif
         <form method="POST" action="{{ route('login') }}" class="space-y-4">
             @csrf
-            <x-field name="email" label="Email" type="email" required autofocus />
-            <x-field name="password" label="Password" type="password" required />
+            <x-field name="email" label="Email" type="email" autocomplete="username" required autofocus />
+            <x-field name="password" label="Password" type="password" autocomplete="current-password" required />
             <x-button class="w-full justify-center">Log in</x-button>
         </form>
     </div>

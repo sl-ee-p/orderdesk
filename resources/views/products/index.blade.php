@@ -6,7 +6,7 @@
     <div class="overflow-hidden rounded-lg bg-white shadow">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-left text-slate-500">
-                <tr><th class="px-4 py-2">SKU</th><th class="px-4 py-2">Name</th><th class="px-4 py-2 text-right">Unit price</th><th class="px-4 py-2">Status</th></tr>
+                <tr><th scope="col" class="px-4 py-2">SKU</th><th scope="col" class="px-4 py-2">Name</th><th scope="col" class="px-4 py-2 text-right">Unit price</th><th scope="col" class="px-4 py-2">Status</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($products as $product)
