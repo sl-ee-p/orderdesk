@@ -61,6 +61,23 @@ class QuoteApiTest extends TestCase
             ->assertJsonValidationErrors('items.0.product_id');
     }
 
+    public function test_valid_until_must_be_a_calendar_date(): void
+    {
+        foreach (['tomorrow', now()->addDays(3)->toIso8601String(), '01/12/2030'] as $value) {
+            $this->postJson('/api/v1/quotes', [...$this->payload(), 'valid_until' => $value])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('valid_until');
+        }
+
+        $this->postJson('/api/v1/quotes', [...$this->payload(), 'valid_until' => now()->subDay()->toDateString()])
+            ->assertJsonValidationErrors('valid_until');
+
+        $date = now()->addDays(3)->toDateString();
+        $this->postJson('/api/v1/quotes', [...$this->payload(), 'valid_until' => $date])
+            ->assertCreated()
+            ->assertJsonPath('data.valid_until', $date);
+    }
+
     public function test_largest_allowed_quote_is_totalled_exactly(): void
     {
         $product = Product::factory()->create(['unit_price_cents' => 4294967295]);

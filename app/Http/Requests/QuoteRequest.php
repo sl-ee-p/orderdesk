@@ -23,7 +23,7 @@ class QuoteRequest extends FormRequest
                     $fail('The tax rate must be a percentage between 0 and 100.');
                 }
             }],
-            'valid_until' => ['nullable', 'date', 'after_or_equal:today'],
+            'valid_until' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('is_active', true)],
