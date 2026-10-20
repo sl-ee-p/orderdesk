@@ -56,7 +56,7 @@ Plain-language notes on why OrderDesk is built the way it is. Updated every phas
 
 **API Resources define the public JSON shape**, separate from the database columns. Money is always integer cents with a `_cents` suffix and tax is `tax_rate_bp`, so clients never parse decimals. Relations (`customer`, `items`) appear only when the controller eager-loaded them (`whenLoaded`), which also keeps lazy loading from sneaking in.
 
-**Pagination:** list endpoints use Laravel's paginator (`data`, `links`, `meta`). `?per_page=` defaults to 15 and is clamped to 1–100 so a client cannot ask for a million rows. Quotes and orders can be filtered with `?status=` and `?customer_id=`.
+**Pagination:** list endpoints use Laravel's paginator (`data`, `links`, `meta`). `?per_page=` defaults to 15 and is clamped to 1–100 so a client cannot ask for a million rows; a value that is not a number is a `422` rather than quietly becoming a one-row page. The `next`/`prev` links carry the request's query string, so following them keeps the filters and page size. Quotes and orders can be filtered with `?status=` and `?customer_id=`.
 
 **Form Requests are reused, not copied.** The API `ProductRequest` and `QuoteRequest` extend the web ones and change only the one field that differs (price and tax rate as integers instead of form strings). Status changes use one `QuoteStatusRequest` / `OrderStatusRequest` for both front ends.
 

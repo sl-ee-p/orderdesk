@@ -152,7 +152,7 @@ curl -s 'http://localhost:8000/api/v1/quotes?status=sent' \
   -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json'
 ```
 
-Lists return `data`, `links` and `meta`. `?per_page=` is limited to 1–100; quotes and orders accept `?status=` and `?customer_id=` (an unknown status or a non-numeric id is a `422`).
+Lists return `data`, `links` and `meta`; the page `links` keep your filters and page size. `?per_page=` must be a whole number and is clamped to 1–100; quotes and orders accept `?status=` and `?customer_id=` (an unknown status, a non-numeric id or a non-numeric page size is a `422`).
 
 ### Create a customer and a product
 

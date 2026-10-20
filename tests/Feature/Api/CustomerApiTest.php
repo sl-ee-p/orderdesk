@@ -42,6 +42,22 @@ class CustomerApiTest extends TestCase
         $this->getJson('/api/v1/customers?per_page=0')->assertOk()->assertJsonPath('meta.per_page', 1);
     }
 
+    public function test_non_numeric_per_page_is_a_validation_error(): void
+    {
+        $this->getJson('/api/v1/customers?per_page=abc')->assertUnprocessable()->assertJsonValidationErrors('per_page');
+        $this->getJson('/api/v1/customers?per_page[]=5')->assertUnprocessable()->assertJsonValidationErrors('per_page');
+    }
+
+    public function test_page_links_keep_the_page_size(): void
+    {
+        Customer::factory()->count(3)->create();
+
+        $next = $this->getJson('/api/v1/customers?per_page=1')->assertOk()->json('links.next');
+
+        $this->assertStringContainsString('per_page=1', $next);
+        $this->assertStringContainsString('page=2', $next);
+    }
+
     public function test_crud_cycle(): void
     {
         $id = $this->postJson('/api/v1/customers', ['name' => 'Jane', 'email' => 'jane@example.com'])

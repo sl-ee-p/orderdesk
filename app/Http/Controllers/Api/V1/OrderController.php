@@ -22,7 +22,8 @@ class OrderController extends ApiController
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['customer_id'] ?? null, fn ($query, $id) => $query->where('customer_id', $id))
             ->latest('id')
-            ->paginate($this->perPage($request));
+            ->paginate($this->perPage($request))
+            ->withQueryString();
 
         return OrderResource::collection($orders);
     }

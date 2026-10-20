@@ -16,7 +16,7 @@ class CustomerController extends ApiController
     public function index(Request $request): AnonymousResourceCollection
     {
         return CustomerResource::collection(
-            Customer::query()->orderBy('name')->paginate($this->perPage($request)),
+            Customer::query()->orderBy('name')->paginate($this->perPage($request))->withQueryString(),
         );
     }
 

@@ -83,6 +83,20 @@ class QuoteApiTest extends TestCase
         $this->getJson('/api/v1/quotes?per_page=2')->assertJsonCount(2, 'data')->assertJsonPath('meta.last_page', 3);
     }
 
+    public function test_page_links_keep_the_filters(): void
+    {
+        Quote::factory()->count(3)->sent()->create();
+        Quote::factory()->create();
+
+        $response = $this->getJson('/api/v1/quotes?status=sent&per_page=1')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 3);
+
+        $next = $response->json('links.next');
+        $this->assertStringContainsString('status=sent', $next);
+        $this->assertStringContainsString('per_page=1', $next);
+    }
+
     public function test_list_filters_are_validated(): void
     {
         $quote = Quote::factory()->create();

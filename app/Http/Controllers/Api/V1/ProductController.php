@@ -15,7 +15,7 @@ class ProductController extends ApiController
     public function index(Request $request): AnonymousResourceCollection
     {
         return ProductResource::collection(
-            Product::query()->orderBy('name')->paginate($this->perPage($request)),
+            Product::query()->orderBy('name')->paginate($this->perPage($request))->withQueryString(),
         );
     }
 

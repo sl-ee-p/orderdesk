@@ -13,10 +13,13 @@ abstract class ApiController extends Controller
 
     /**
      * Page size from ?per_page=, kept between 1 and MAX_PER_PAGE.
+     * A non-numeric value is a 422, not a silent one-row page.
      */
     protected function perPage(Request $request): int
     {
-        return max(1, min(self::MAX_PER_PAGE, $request->integer('per_page', 15)));
+        $perPage = $request->validate(['per_page' => ['nullable', 'integer']])['per_page'] ?? 15;
+
+        return max(1, min(self::MAX_PER_PAGE, (int) $perPage));
     }
 
     /**
