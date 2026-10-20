@@ -16,6 +16,9 @@ use Illuminate\Database\Seeder;
  */
 class DemoSeeder extends Seeder
 {
+    /** The demo login; its password is the factory default, "password". */
+    public const DEMO_EMAIL = 'demo@orderdesk.test';
+
     /** @var array<string, array{string, int}> sku => [name, unit price in cents] */
     private const PRODUCTS = [
         'KB-1001' => ['Mechanical keyboard', 8990],
@@ -38,13 +41,13 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         // Idempotent: a container restart must not duplicate or crash on the demo data.
-        if (User::where('email', 'demo@orderdesk.test')->exists()) {
+        if (User::where('email', self::DEMO_EMAIL)->exists()) {
             return;
         }
 
         $user = User::factory()->create([
             'name' => 'Demo Admin',
-            'email' => 'demo@orderdesk.test',
+            'email' => self::DEMO_EMAIL,
         ]);
 
         foreach (self::PRODUCTS as $sku => [$name, $price]) {

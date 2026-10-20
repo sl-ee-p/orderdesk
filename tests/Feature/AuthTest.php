@@ -16,6 +16,15 @@ class AuthTest extends TestCase
         $this->get('/customers')->assertRedirect('/login');
     }
 
+    public function test_demo_login_hint_only_appears_when_the_demo_account_exists(): void
+    {
+        $this->get('/login')->assertOk()->assertDontSee('Demo login');
+
+        User::factory()->create(['email' => 'demo@orderdesk.test']);
+
+        $this->get('/login')->assertOk()->assertSee('Demo login: demo@orderdesk.test / password');
+    }
+
     public function test_user_can_log_in_and_out(): void
     {
         $user = User::factory()->create(['password' => 'secret-pass']);
