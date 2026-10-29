@@ -4,7 +4,7 @@ services:
   app:
     image: ${IMAGE:?set by deploy.sh}
     ports:
-      - "${HOST_PORT:-8082}:80"
+      - "192.168.0.100:${HOST_PORT:-8082}:80"
     env_file: .env
     environment:
       APP_ENV: production
